@@ -1,0 +1,61 @@
+name: Validate JSON in target repo
+
+on:
+  workflow_dispatch:  # Manual run
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths:
+      - "**/*.json"      # Only trigger when json files change
+    # This workflow will run when PRs are made *into SG-NL-Balance*
+
+jobs:
+  validate-target-repo:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout the target repo (SG-NL-Balance)
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: SG-CommunityTesting/SG-NL-Balance
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: target-repo
+
+      # 2️⃣ Checkout the CI scripts repo (self)
+      - name: Checkout CI scripts
+        uses: actions/checkout@v4
+        with:
+          path: ci-scripts
+
+      # 3️⃣ Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      # 4️⃣ Install dependencies
+      - name: Install dependencies
+        run: |
+          pip install -r ci-scripts/requirements.txt || echo "No requirements"
+
+      # 5️⃣ Run validator
+      - name: Run JSON validation
+        working-directory: target-repo
+        run: |
+          python ../ci-scripts/run_balance_validation.py --path .
+
+      # 6️⃣ Upload log as artifact (optional but useful)
+      - name: Upload validation log
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-log
+          path: target-repo/validation_output.log
+          if-no-files-found: ignore
+
+      # 7️⃣ Comment results on PR
+      - name: Post results to PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: target-repo/validation_output.log
