@@ -3,6 +3,8 @@ from pathlib import Path
 import json
 from balance_validators import VALIDATORS
 
+LOG_FILE = "validation_output.log"
+
 
 def find_json_files(root_path: Path):
     return root_path.rglob("*.json")
@@ -24,20 +26,29 @@ def validate_file(path: Path, fix: bool = False):
     return failures
 
 
-def print_failure_table(failure_dict):
-    if not failure_dict:
-        print("\n🎉 All files passed validation!")
-        return
+def print_failure_table(failure_dict, log_path: Path = None):
+    lines = []
 
-    print("\n❌ Validation failures:")
-    print("=" * 50)
-    print(f"{'File':<40} Failed Rules")
-    print("-" * 50)
-    for path, rules in failure_dict.items():
-        rules_str = ", ".join(rules)
-        print(f"{str(path):<40} {rules_str}")
-    print("=" * 50)
-    print(f"Total failed files: {len(failure_dict)}")
+    if not failure_dict:
+        lines.append("\n🎉 All files passed validation!")
+    else:
+        lines.append("\n❌ Validation failures:")
+        lines.append("=" * 50)
+        lines.append(f"{'File':<40} Failed Rules")
+        lines.append("-" * 50)
+        for path, rules in failure_dict.items():
+            rules_str = ", ".join(rules)
+            lines.append(f"{str(path):<40} {rules_str}")
+        lines.append("=" * 50)
+        lines.append(f"Total failed files: {len(failure_dict)}")
+
+    # Print to console
+    print("\n".join(lines))
+
+    # Write to log file if provided
+    if log_path:
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
 
 
 if __name__ == "__main__":
@@ -54,11 +65,4 @@ if __name__ == "__main__":
     failure_dict = {}
 
     for json_file in find_json_files(root):
-        failures = validate_file(json_file, fix)
-        if failures:
-            failure_dict[json_file] = failures
-
-    print_failure_table(failure_dict)
-
-    if failure_dict:
-        sys.exit(1)
+        _
