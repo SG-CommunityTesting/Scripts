@@ -1,0 +1,43 @@
+name: Validate JSON in target repo
+
+on:
+  workflow_dispatch:  
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [main]
+
+jobs:
+  validate-target-repo:
+    runs-on: ubuntu-latest
+    steps:
+      # 1️⃣ Checkout the target repo (SG-NL-Balance)
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: SG-CommunityTesting/SG-NL-Balance
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: target-repo
+
+      # 2️⃣ Checkout the CI scripts repo (self)
+      - name: Checkout CI scripts
+        uses: actions/checkout@v4
+        with:
+          path: ci-scripts
+
+      # 3️⃣ Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      # 4️⃣ Install dependencies (if any)
+      - name: Install dependencies
+        run: |
+          pip install -r ci-scripts/requirements.txt || echo "No requirements"
+
+      # 5️⃣ Run JSON validation on the target repo
+      - name: Run JSON validation
+        working-directory: target-repo
+        run: |
+          python ../ci-scripts/run_balance_validation.py
