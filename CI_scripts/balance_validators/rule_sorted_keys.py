@@ -2,22 +2,39 @@ from pathlib import Path
 import json
 
 
-def keys_sorted(path: Path, data: dict, fix: bool = False) -> bool:
+def sorted_keys_correct(path: Path, data: dict, fix: bool = False) -> bool:
     """
-    Rule: keys must be sorted alphabetically to allow easier merging with FG
+    Rule: Sorts the key values at the top layer, doesnt sort nested lists/dicts ect.
     """
-    formatted = json.dumps(data, indent=2, sort_keys=True) + "\n"
 
-    with open(path, "r", encoding="utf-8") as f:
-        existing = f.read()
+    # Check what structure of json
+    if "id" in data:
+        target_layer = data
+    elif isinstance(data.get("data"), dict) and "id" in data["data"]:
+        target_layer = data["data"]
+    else:
+        print(f"❌ {path}: cannot locate 'id' field")
+        return False
 
-    if sorted(data.keys()) != list(data.keys()):
-        if fix:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(formatted)
-            print(f"🔧 {path}: keys sorted automatically")
-            return True
+    sorted_layer = {k: target_layer[k] for k in sorted(target_layer.keys())}
+
+    if list(target_layer.keys()) == list(sorted_layer.keys()):
+        return True
+
+    if fix:
+        if target_layer is data:
+            new_data = dict(sorted_layer)
+            for k, v in data.items():
+                if k not in new_data:
+                    new_data[k] = v
+            final = new_data
+
         else:
-            print(f"❌ {path}: keys are not sorted alphabetically")
-            return False
-    return True
+            data["data"] = sorted_layer
+            final = data
+
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(final, indent=2) + "\n")
+
+        print(f"🔧 {path}: keys sorted")
+        return True
