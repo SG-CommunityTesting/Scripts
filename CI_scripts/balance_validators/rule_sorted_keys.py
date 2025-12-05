@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 
 
-def sorted_keys_correct(path: Path, data: dict, fix: bool = False) -> bool:
+def sorted_keys(path: Path, data: dict, fix: bool = False) -> bool:
     """
     Rule: Sorts the key values at the top layer, doesnt sort nested lists/dicts ect.
     """

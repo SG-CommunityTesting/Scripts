@@ -4,8 +4,8 @@ import json
 from balance_validators import VALIDATORS
 
 
-def find_json_files():
-    return Path(".").rglob("*.json")
+def find_json_files(root_path: Path):
+    return root_path.rglob("*.json")
 
 
 def validate_file(path: Path, fix: bool = False):
@@ -41,10 +41,19 @@ def print_failure_table(failure_dict):
 
 
 if __name__ == "__main__":
-    fix = "--fix" in sys.argv
+    args = sys.argv[1:]
+    fix = "--fix" in args
+
+    # Get --path argument
+    if "--path" in args:
+        idx = args.index("--path")
+        root = Path(args[idx + 1])
+    else:
+        root = Path(".")
+
     failure_dict = {}
 
-    for json_file in find_json_files():
+    for json_file in find_json_files(root):
         failures = validate_file(json_file, fix)
         if failures:
             failure_dict[json_file] = failures
