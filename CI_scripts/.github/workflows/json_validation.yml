@@ -1,21 +1,19 @@
 name: Validate JSON in target repo
 
 on:
-  workflow_dispatch:    # manual trigger
-  pull_request:         # triggers on PRs targeting main
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
     branches: [main]
     paths:
-      - '**/*.json'
-  push:
-    branches: [main]    # triggers on direct pushes
-    paths:
-      - '**/*.json'
+      - "**/*.json"      # Only trigger when json files change
 
 jobs:
   validate-target-repo:
     runs-on: ubuntu-latest
+
     steps:
-      # 1️⃣ Checkout the target repo
+      # 1️⃣ Checkout the target repo (SG-NL-Balance)
       - name: Checkout target repo
         uses: actions/checkout@v4
         with:
@@ -29,28 +27,34 @@ jobs:
         with:
           path: ci-scripts
 
-      # 3️⃣ Set up Python
-      - name: Set up Python
+      # 3️⃣ Setup Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
-      # 4️⃣ Run JSON validation
+      # 4️⃣ Install dependencies
+      - name: Install dependencies
+        run: |
+          pip install -r ci-scripts/requirements.txt || echo "No requirements"
+
+      # 5️⃣ Run validator
       - name: Run JSON validation
-        id: validation
         working-directory: target-repo
         run: |
-          python ../ci-scripts/run_balance_validation.py --path . > validation_output.log || exit 0
-        continue-on-error: true
+          python ../ci-scripts/run_balance_validation.py --path .
 
-      # 5️⃣ Post results as a PR comment (if PR)
-      - name: Comment PR with results
-        if: github.event_name == 'pull_request'
+      # 6️⃣ Upload log as artifact
+      - name: Upload validation log
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-log
+          path: target-repo/validation_output.log
+          if-no-files-found: ignore
+
+      # 7️⃣ Comment results on PR
+      - name: Post results to PR
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          header: "💥 JSON Validation Results"
-          message: |
-            ``` 
-            $(cat target-repo/validation_output.log || echo "No output captured")
-            ```
+          recreate: true
+          path: target-repo/validation_output.log
